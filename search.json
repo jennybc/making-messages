@@ -3,10 +3,9 @@
     {
       "path": "about.html",
       "title": "About this site",
-      "description": "Some additional details about the website",
       "author": [],
-      "contents": "\n\n\n\n",
-      "last_modified": "2021-03-11T22:13:43+00:00"
+      "contents": "\nSource repo: https://github.com/jennybc/making-messages\nMade with distill: “documentation” site | “reference” site (pkgdown)\n\n\n\n",
+      "last_modified": "2021-03-11T22:40:35+00:00"
     },
     {
       "path": "index.html",
@@ -14,7 +13,7 @@
       "description": "Welcome to the website. I hope you enjoy it!\n",
       "author": [],
       "contents": "\n\n\n\n",
-      "last_modified": "2021-03-11T22:13:44+00:00"
+      "last_modified": "2021-03-11T22:40:36+00:00"
     }
   ],
   "collections": []
