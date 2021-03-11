@@ -1,10 +1,11 @@
 ---
 title: "About this site"
-description: |
-  Some additional details about the website
 ---
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = FALSE)
 ```
 
+Source repo: <https://github.com/jennybc/making-messages>
+
+Made with distill: ["documentation" site](https://rstudio.github.io/distill/) | ["reference" site (pkgdown)](https://pkgs.rstudio.com/distill/)
