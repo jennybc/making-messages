@@ -1,0 +1,184 @@
+---
+title: "Typical message making tasks and challenges"
+output: distill::distill_article
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>",
+  message = TRUE,
+  error = TRUE
+)
+```
+
+We need to emit:
+
+* Informational messages
+* Error messages
+
+<aside>
+I'm ignoring warnings, because I use them so seldom, but a full treatment should cover them. Our lifecycle policies, in particular, lean heavily on warnings.
+</aside>
+
+What do these messages tend to look like, in the wild, using base tools?
+
+## `base::message()` and `base::stop()`
+
+First, let's review the signatures of `message()` and `stop()`.
+
+```{r eval = FALSE}
+message(..., domain = NULL, appendLF = TRUE)
+stop(..., call. = TRUE, domain = NULL)
+```
+
+Both make make a message from the loose parts that come via `...`, which is documented as:
+
+> zero or more objects which can be coerced to character (and which are pasted together with no separator) 
+
+Here's a tour of `message()` calls sprinkled around tidyverse / r-lib, with me pointing out small, recurring challenges.
+I'll often have to make some fake objects, so we can actually run the code.
+
+This is about characterizing the problem space as we find it and foreshadowing some existing solutions we already use and some improvement proposals I want to make.
+
+### Syntactical noise and readability
+
+The alternation between literal strings and strings stored as character objects causes a lot syntactical noise.
+This is why many of us embrace the interpolation offered by the [glue package](https://glue.tidyverse.org), which I'll use as a running comparator.
+
+```{r}
+library(glue)
+
+path <- "path/to/a/thing"
+message("Caching nycflights db at ", path)
+
+# glue-ified
+message(glue("Caching nycflights db at {path}"))
+
+dim_f <- c(4, 7)
+units <- "inch"
+message("Saving ", dim_f[1], " x ", dim_f[2], " ", units, " image")
+
+# glue-ified
+message(glue("Saving {dim_f[1]} x {dim_f[2]} {units} image"))
+```
+
+`sprintf()` offers some hope of relief, because at least the single format string eliminates lots of quotes.
+
+```{r}
+name <- "thing"
+replacement <- " by doohickey"
+version <- "1.0.0"
+message(sprintf("%s is deprecated%s. Deprecated in version '%s'.",
+                name, replacement, version))
+
+# glue-ified
+message(glue(
+  "{name} is deprecated{replacement}. Deprecated in version '{version}'."
+))
+```
+
+I'd still rather write, read, and maintain the glue version.
+You don't have to bounce between the format string and the arguments supplying values, doing tedious counting or substitution in your head.
+
+Conclusion: string interpolation is critical for any function that makes messages.
+
+### Literal quotes (or other inline style)
+
+Often you want to surround an interpolated stored string with an actual quoting symbol, so it's clearly distinguished as, e.g., a variable or package name or a field.
+This invites a very specific set of mistakes: not enough backslashes, backslashes in the wrong place, and unbalanced quotes.
+
+<aside>
+If available, you might use color and/or other styling (e.g., bold, underline) for this purpose.
+</aside>
+
+```{r}
+FMT <- "FORMAT"
+message("Using: \"", FMT, "\"")
+
+element <- "ggplot2.thingy"
+message("Theme element `", element, "` missing")
+
+# glue-ified
+message(glue("Using: \"{FMT}\""))
+message(glue('Using: "{FMT}"'))   # some single / double quote games
+message(glue("Theme element `{element}` missing"))
+```
+
+<aside>
+Yes, you can play some single vs. double quote games, but it only gets you so far.
+</aside>
+
+Conclusion: Messages are not just "flat" strings.
+You really need inline styles to convey all the necessary information.
+
+Spoiler: this is the motivation for the cli package's [semantic CLI functionality](https://cli.r-lib.org/articles/semantic-cli.html), which has roots in the [`ui_*()` functions](https://usethis.r-lib.org/reference/ui.html) in usethis.
+
+### Collapsing lists of things
+
+It's pretty common that your message incorporates a collection of items
+Here you see a lot of `paste()` and friends, used with the `collapse` argument.
+
+```{r}
+x <- structure(1, class = c("alfa", "bravo", "charlie"))
+message("Don't know how to automatically pick scale for object of type ",
+        paste(class(x), collapse = "/"), ". Defaulting to continuous.")
+
+# glue-ified
+message(glue("
+ Don't know how to automatically pick scale for object of type \\
+ {glue_collapse(class(x), sep = '/')}. Defaulting to continuous."            
+))
+
+msg <- c("'this'", "'that'")
+message("`geom_smooth()` using ", paste0(msg, collapse = " and "))
+
+# glue-ified
+message(glue("`geom_smooth()` using {glue_collapse(msg, sep = ' and ')}"))
+```
+
+Conclusion: Often we want to inject an array of strings and collapse it with some attention to aesthetics, conventions, and grammar.
+
+<aside>
+The need to collapse lists often co-occurs with the need for inline style.
+A closely related problem is allocating message parts (e.g. list items) to different lines, e.g. making bullet lists.
+</aside>
+
+The next example really starts to show multiple ergonomic problems interacting with each other, i.e. working over a list of interpolated strings and dealing with line breaks.
+
+```{r}
+orig_name <- c(a = "o1", b = "o2")
+name <- c(a = "n1", b = "n2")
+new_names <- c("b", "a")
+
+message(
+  "New names:\n",
+  paste0(orig_name[new_names], " -> ", name[new_names], collapse = "\n")
+)
+
+# glue-ified
+nms <- glue("{orig_name[new_names]} -> {name[new_names]}\n")
+nms <- glue_collapse(nms, sep = "\n")
+message(glue("New names:\n{nms}"))
+```
+
+We're also starting to see some challenges with glue, where you need to make several calls in sequence, to build up the message.
+I've decided the explicit management of newlines (`\n`) is a strong indicator that there's some missing bit of tooling.
+
+Let's go out with an extravaganza of interpolation, inline styling and collapsing!
+
+```{r}
+trained <- c(alfa = "apple", bravo = "banana")
+message("Multiple formats matched: ",
+        paste("\"", names(trained), "\"(", trained, ")", sep = "",
+              collapse = ", "))
+
+# glue-ified
+x <- glue('"{names(trained)}"({trained})')
+y <- glue_collapse(x, sep = ", ")
+message(glue("Multiple formats matched: {y}"))
+```
+
+
+
+

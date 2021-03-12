@@ -9,6 +9,9 @@ Authors@R:
            comment = c(ORCID = "0000-0002-6983-2759"))
 Description: What the package does (one paragraph).
 License: MIT + file LICENSE
+Imports: 
+    glue,
+    rlang
 Encoding: UTF-8
 LazyData: true
 Roxygen: list(markdown = TRUE)
