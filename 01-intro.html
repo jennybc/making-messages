@@ -86,29 +86,26 @@ code span.wa { color: #5e5e5e; font-style: italic; } /* Warning */
 </style>
 
   <!--radix_placeholder_meta_tags-->
-  <title>Making messages</title>
+  <title>Making messages: Typical message making tasks and challenges</title>
   
-  <meta property="description" itemprop="description" content="Welcome to the website. I hope you enjoy it!"/>
   
   
   
   <!--  https://developers.facebook.com/docs/sharing/webmasters#markup -->
-  <meta property="og:title" content="Making messages"/>
+  <meta property="og:title" content="Making messages: Typical message making tasks and challenges"/>
   <meta property="og:type" content="article"/>
-  <meta property="og:description" content="Welcome to the website. I hope you enjoy it!"/>
   <meta property="og:locale" content="en_US"/>
   <meta property="og:site_name" content="Making messages"/>
   
   <!--  https://dev.twitter.com/cards/types/summary -->
   <meta property="twitter:card" content="summary"/>
-  <meta property="twitter:title" content="Making messages"/>
-  <meta property="twitter:description" content="Welcome to the website. I hope you enjoy it!"/>
+  <meta property="twitter:title" content="Making messages: Typical message making tasks and challenges"/>
   
   <!--/radix_placeholder_meta_tags-->
   <!--radix_placeholder_rmarkdown_metadata-->
   
   <script type="text/json" id="radix-rmarkdown-metadata">
-  {"type":"list","attributes":{"names":{"type":"character","attributes":{},"value":["title","description","site"]}},"value":[{"type":"character","attributes":{},"value":["Making messages"]},{"type":"character","attributes":{},"value":["Welcome to the website. I hope you enjoy it!\n"]},{"type":"character","attributes":{},"value":["distill::distill_website"]}]}
+  {"type":"list","attributes":{"names":{"type":"character","attributes":{},"value":["title","output"]}},"value":[{"type":"character","attributes":{},"value":["Typical message making tasks and challenges"]},{"type":"character","attributes":{},"value":["distill::distill_article"]}]}
   </script>
   <!--/radix_placeholder_rmarkdown_metadata-->
   <!--radix_placeholder_navigation_in_header-->
@@ -2052,7 +2049,7 @@ code span.wa { color: #5e5e5e; font-style: italic; } /* Warning */
 <!--radix_placeholder_front_matter-->
 
 <script id="distill-front-matter" type="text/json">
-{"title":"Making messages","description":"Welcome to the website. I hope you enjoy it!","authors":[]}
+{"title":"Typical message making tasks and challenges","authors":[]}
 </script>
 
 <!--/radix_placeholder_front_matter-->
@@ -2074,18 +2071,226 @@ code span.wa { color: #5e5e5e; font-style: italic; } /* Warning */
 <!--/radix_placeholder_site_before_body-->
 
 <div class="d-title">
-<h1>Making messages</h1>
+<h1>Typical message making tasks and challenges</h1>
 <!--radix_placeholder_categories-->
 <!--/radix_placeholder_categories-->
-<p><p>Welcome to the website. I hope you enjoy it!</p></p>
+
 </div>
 
 
 <div class="d-article">
+<p>We need to emit:</p>
 <ul>
-<li><a href="01-intro.html">Intro</a></li>
+<li>Informational messages</li>
+<li>Error messages</li>
 </ul>
-<div class="sourceCode" id="cb1"><pre class="sourceCode r distill-force-highlighting-css"><code class="sourceCode r"></code></pre></div>
+<aside>
+I’m ignoring warnings, because I use them so seldom, but a full treatment should cover them. Our lifecycle policies, in particular, lean heavily on warnings.
+</aside>
+<p>What do these messages tend to look like, in the wild, using base tools?</p>
+<h2 id="basemessage-and-basestop"><code>base::message()</code> and <code>base::stop()</code></h2>
+<p>First, let’s review the signatures of <code>message()</code> and <code>stop()</code>.</p>
+<div class="layout-chunk" data-layout="l-body">
+<div class="sourceCode">
+<pre class="sourceCode r"><code class="sourceCode r"><span class='fu'><a href='https://rdrr.io/r/base/message.html'>message</a></span><span class='op'>(</span><span class='va'>...</span>, domain <span class='op'>=</span> <span class='cn'>NULL</span>, appendLF <span class='op'>=</span> <span class='cn'>TRUE</span><span class='op'>)</span>
+<span class='kw'><a href='https://rdrr.io/r/base/stop.html'>stop</a></span><span class='op'>(</span><span class='va'>...</span>, call. <span class='op'>=</span> <span class='cn'>TRUE</span>, domain <span class='op'>=</span> <span class='cn'>NULL</span><span class='op'>)</span>
+</code></pre>
+</div>
+</div>
+<p>Both make make a message from the loose parts that come via <code>...</code>, which is documented as:</p>
+<blockquote>
+<p>zero or more objects which can be coerced to character (and which are pasted together with no separator)</p>
+</blockquote>
+<p>Here’s a tour of <code>message()</code> calls sprinkled around tidyverse / r-lib, with me pointing out small, recurring challenges. I’ll often have to make some fake objects, so we can actually run the code.</p>
+<p>This is about characterizing the problem space as we find it and foreshadowing some existing solutions we already use and some improvement proposals I want to make.</p>
+<h3 id="syntactical-noise-and-readability">Syntactical noise and readability</h3>
+<p>The alternation between literal strings and strings stored as character objects causes a lot syntactical noise. This is why many of us embrace the interpolation offered by the <a href="https://glue.tidyverse.org">glue package</a>, which I’ll use as a running comparator.</p>
+<div class="layout-chunk" data-layout="l-body">
+<div class="sourceCode">
+<pre class="sourceCode r"><code class="sourceCode r"><span class='kw'><a href='https://rdrr.io/r/base/library.html'>library</a></span><span class='op'>(</span><span class='va'><a href='https://github.com/tidyverse/glue'>glue</a></span><span class='op'>)</span>
+
+<span class='va'>path</span> <span class='op'>&lt;-</span> <span class='st'>"path/to/a/thing"</span>
+<span class='fu'><a href='https://rdrr.io/r/base/message.html'>message</a></span><span class='op'>(</span><span class='st'>"Caching nycflights db at "</span>, <span class='va'>path</span><span class='op'>)</span>
+</code></pre>
+</div>
+<pre><code>#&gt; Caching nycflights db at path/to/a/thing</code></pre>
+<div class="sourceCode">
+<pre class="sourceCode r"><code class="sourceCode r">
+<span class='co'># glue-ified</span>
+<span class='fu'><a href='https://rdrr.io/r/base/message.html'>message</a></span><span class='op'>(</span><span class='fu'><a href='https://glue.tidyverse.org/reference/glue.html'>glue</a></span><span class='op'>(</span><span class='st'>"Caching nycflights db at {path}"</span><span class='op'>)</span><span class='op'>)</span>
+</code></pre>
+</div>
+<pre><code>#&gt; Caching nycflights db at path/to/a/thing</code></pre>
+<div class="sourceCode">
+<pre class="sourceCode r"><code class="sourceCode r">
+<span class='va'>dim_f</span> <span class='op'>&lt;-</span> <span class='fu'><a href='https://rdrr.io/r/base/c.html'>c</a></span><span class='op'>(</span><span class='fl'>4</span>, <span class='fl'>7</span><span class='op'>)</span>
+<span class='va'>units</span> <span class='op'>&lt;-</span> <span class='st'>"inch"</span>
+<span class='fu'><a href='https://rdrr.io/r/base/message.html'>message</a></span><span class='op'>(</span><span class='st'>"Saving "</span>, <span class='va'>dim_f</span><span class='op'>[</span><span class='fl'>1</span><span class='op'>]</span>, <span class='st'>" x "</span>, <span class='va'>dim_f</span><span class='op'>[</span><span class='fl'>2</span><span class='op'>]</span>, <span class='st'>" "</span>, <span class='va'>units</span>, <span class='st'>" image"</span><span class='op'>)</span>
+</code></pre>
+</div>
+<pre><code>#&gt; Saving 4 x 7 inch image</code></pre>
+<div class="sourceCode">
+<pre class="sourceCode r"><code class="sourceCode r">
+<span class='co'># glue-ified</span>
+<span class='fu'><a href='https://rdrr.io/r/base/message.html'>message</a></span><span class='op'>(</span><span class='fu'><a href='https://glue.tidyverse.org/reference/glue.html'>glue</a></span><span class='op'>(</span><span class='st'>"Saving {dim_f[1]} x {dim_f[2]} {units} image"</span><span class='op'>)</span><span class='op'>)</span>
+</code></pre>
+</div>
+<pre><code>#&gt; Saving 4 x 7 inch image</code></pre>
+</div>
+<p><code>sprintf()</code> offers some hope of relief, because at least the single format string eliminates lots of quotes.</p>
+<div class="layout-chunk" data-layout="l-body">
+<div class="sourceCode">
+<pre class="sourceCode r"><code class="sourceCode r"><span class='va'>name</span> <span class='op'>&lt;-</span> <span class='st'>"thing"</span>
+<span class='va'>replacement</span> <span class='op'>&lt;-</span> <span class='st'>" by doohickey"</span>
+<span class='va'>version</span> <span class='op'>&lt;-</span> <span class='st'>"1.0.0"</span>
+<span class='fu'><a href='https://rdrr.io/r/base/message.html'>message</a></span><span class='op'>(</span><span class='fu'><a href='https://rdrr.io/r/base/sprintf.html'>sprintf</a></span><span class='op'>(</span><span class='st'>"%s is deprecated%s. Deprecated in version '%s'."</span>,
+                <span class='va'>name</span>, <span class='va'>replacement</span>, <span class='va'>version</span><span class='op'>)</span><span class='op'>)</span>
+</code></pre>
+</div>
+<pre><code>#&gt; thing is deprecated by doohickey. Deprecated in version &#39;1.0.0&#39;.</code></pre>
+<div class="sourceCode">
+<pre class="sourceCode r"><code class="sourceCode r">
+<span class='co'># glue-ified</span>
+<span class='fu'><a href='https://rdrr.io/r/base/message.html'>message</a></span><span class='op'>(</span><span class='fu'><a href='https://glue.tidyverse.org/reference/glue.html'>glue</a></span><span class='op'>(</span>
+  <span class='st'>"{name} is deprecated{replacement}. Deprecated in version '{version}'."</span>
+<span class='op'>)</span><span class='op'>)</span>
+</code></pre>
+</div>
+<pre><code>#&gt; thing is deprecated by doohickey. Deprecated in version &#39;1.0.0&#39;.</code></pre>
+</div>
+<p>I’d still rather write, read, and maintain the glue version. You don’t have to bounce between the format string and the arguments supplying values, doing tedious counting or substitution in your head.</p>
+<p>Conclusion: string interpolation is critical for any function that makes messages.</p>
+<h3 id="literal-quotes-or-other-inline-style">Literal quotes (or other inline style)</h3>
+<p>Often you want to surround an interpolated stored string with an actual quoting symbol, so it’s clearly distinguished as, e.g., a variable or package name or a field. This invites a very specific set of mistakes: not enough backslashes, backslashes in the wrong place, and unbalanced quotes.</p>
+<aside>
+If available, you might use color and/or other styling (e.g., bold, underline) for this purpose.
+</aside>
+<div class="layout-chunk" data-layout="l-body">
+<div class="sourceCode">
+<pre class="sourceCode r"><code class="sourceCode r"><span class='va'>FMT</span> <span class='op'>&lt;-</span> <span class='st'>"FORMAT"</span>
+<span class='fu'><a href='https://rdrr.io/r/base/message.html'>message</a></span><span class='op'>(</span><span class='st'>"Using: \""</span>, <span class='va'>FMT</span>, <span class='st'>"\""</span><span class='op'>)</span>
+</code></pre>
+</div>
+<pre><code>#&gt; Using: &quot;FORMAT&quot;</code></pre>
+<div class="sourceCode">
+<pre class="sourceCode r"><code class="sourceCode r">
+<span class='va'>element</span> <span class='op'>&lt;-</span> <span class='st'>"ggplot2.thingy"</span>
+<span class='fu'><a href='https://rdrr.io/r/base/message.html'>message</a></span><span class='op'>(</span><span class='st'>"Theme element `"</span>, <span class='va'>element</span>, <span class='st'>"` missing"</span><span class='op'>)</span>
+</code></pre>
+</div>
+<pre><code>#&gt; Theme element `ggplot2.thingy` missing</code></pre>
+<div class="sourceCode">
+<pre class="sourceCode r"><code class="sourceCode r">
+<span class='co'># glue-ified</span>
+<span class='fu'><a href='https://rdrr.io/r/base/message.html'>message</a></span><span class='op'>(</span><span class='fu'><a href='https://glue.tidyverse.org/reference/glue.html'>glue</a></span><span class='op'>(</span><span class='st'>"Using: \"{FMT}\""</span><span class='op'>)</span><span class='op'>)</span>
+</code></pre>
+</div>
+<pre><code>#&gt; Using: &quot;FORMAT&quot;</code></pre>
+<div class="sourceCode">
+<pre class="sourceCode r"><code class="sourceCode r"><span class='fu'><a href='https://rdrr.io/r/base/message.html'>message</a></span><span class='op'>(</span><span class='fu'><a href='https://glue.tidyverse.org/reference/glue.html'>glue</a></span><span class='op'>(</span><span class='st'>'Using: "{FMT}"'</span><span class='op'>)</span><span class='op'>)</span>   <span class='co'># some single / double quote games</span>
+</code></pre>
+</div>
+<pre><code>#&gt; Using: &quot;FORMAT&quot;</code></pre>
+<div class="sourceCode">
+<pre class="sourceCode r"><code class="sourceCode r"><span class='fu'><a href='https://rdrr.io/r/base/message.html'>message</a></span><span class='op'>(</span><span class='fu'><a href='https://glue.tidyverse.org/reference/glue.html'>glue</a></span><span class='op'>(</span><span class='st'>"Theme element `{element}` missing"</span><span class='op'>)</span><span class='op'>)</span>
+</code></pre>
+</div>
+<pre><code>#&gt; Theme element `ggplot2.thingy` missing</code></pre>
+</div>
+<aside>
+Yes, you can play some single vs. double quote games, but it only gets you so far.
+</aside>
+<p>Conclusion: Messages are not just “flat” strings. You really need inline styles to convey all the necessary information.</p>
+<p>Spoiler: this is the motivation for the cli package’s <a href="https://cli.r-lib.org/articles/semantic-cli.html">semantic CLI functionality</a>, which has roots in the <a href="https://usethis.r-lib.org/reference/ui.html"><code>ui_*()</code> functions</a> in usethis.</p>
+<h3 id="collapsing-lists-of-things">Collapsing lists of things</h3>
+<p>It’s pretty common that your message incorporates a collection of items Here you see a lot of <code>paste()</code> and friends, used with the <code>collapse</code> argument.</p>
+<div class="layout-chunk" data-layout="l-body">
+<div class="sourceCode">
+<pre class="sourceCode r"><code class="sourceCode r"><span class='va'>x</span> <span class='op'>&lt;-</span> <span class='fu'><a href='https://rdrr.io/r/base/structure.html'>structure</a></span><span class='op'>(</span><span class='fl'>1</span>, class <span class='op'>=</span> <span class='fu'><a href='https://rdrr.io/r/base/c.html'>c</a></span><span class='op'>(</span><span class='st'>"alfa"</span>, <span class='st'>"bravo"</span>, <span class='st'>"charlie"</span><span class='op'>)</span><span class='op'>)</span>
+<span class='fu'><a href='https://rdrr.io/r/base/message.html'>message</a></span><span class='op'>(</span><span class='st'>"Don't know how to automatically pick scale for object of type "</span>,
+        <span class='fu'><a href='https://rdrr.io/r/base/paste.html'>paste</a></span><span class='op'>(</span><span class='fu'><a href='https://rdrr.io/r/base/class.html'>class</a></span><span class='op'>(</span><span class='va'>x</span><span class='op'>)</span>, collapse <span class='op'>=</span> <span class='st'>"/"</span><span class='op'>)</span>, <span class='st'>". Defaulting to continuous."</span><span class='op'>)</span>
+</code></pre>
+</div>
+<pre><code>#&gt; Don&#39;t know how to automatically pick scale for object of type alfa/bravo/charlie. Defaulting to continuous.</code></pre>
+<div class="sourceCode">
+<pre class="sourceCode r"><code class="sourceCode r">
+<span class='co'># glue-ified</span>
+<span class='fu'><a href='https://rdrr.io/r/base/message.html'>message</a></span><span class='op'>(</span><span class='fu'><a href='https://glue.tidyverse.org/reference/glue.html'>glue</a></span><span class='op'>(</span><span class='st'>"
+ Don't know how to automatically pick scale for object of type \\
+ {glue_collapse(class(x), sep = '/')}. Defaulting to continuous."</span>            
+<span class='op'>)</span><span class='op'>)</span>
+</code></pre>
+</div>
+<pre><code>#&gt; Don&#39;t know how to automatically pick scale for object of type alfa/bravo/charlie. Defaulting to continuous.</code></pre>
+<div class="sourceCode">
+<pre class="sourceCode r"><code class="sourceCode r">
+<span class='va'>msg</span> <span class='op'>&lt;-</span> <span class='fu'><a href='https://rdrr.io/r/base/c.html'>c</a></span><span class='op'>(</span><span class='st'>"'this'"</span>, <span class='st'>"'that'"</span><span class='op'>)</span>
+<span class='fu'><a href='https://rdrr.io/r/base/message.html'>message</a></span><span class='op'>(</span><span class='st'>"`geom_smooth()` using "</span>, <span class='fu'><a href='https://rdrr.io/r/base/paste.html'>paste0</a></span><span class='op'>(</span><span class='va'>msg</span>, collapse <span class='op'>=</span> <span class='st'>" and "</span><span class='op'>)</span><span class='op'>)</span>
+</code></pre>
+</div>
+<pre><code>#&gt; `geom_smooth()` using &#39;this&#39; and &#39;that&#39;</code></pre>
+<div class="sourceCode">
+<pre class="sourceCode r"><code class="sourceCode r">
+<span class='co'># glue-ified</span>
+<span class='fu'><a href='https://rdrr.io/r/base/message.html'>message</a></span><span class='op'>(</span><span class='fu'><a href='https://glue.tidyverse.org/reference/glue.html'>glue</a></span><span class='op'>(</span><span class='st'>"`geom_smooth()` using {glue_collapse(msg, sep = ' and ')}"</span><span class='op'>)</span><span class='op'>)</span>
+</code></pre>
+</div>
+<pre><code>#&gt; `geom_smooth()` using &#39;this&#39; and &#39;that&#39;</code></pre>
+</div>
+<p>Conclusion: Often we want to inject an array of strings and collapse it with some attention to aesthetics, conventions, and grammar.</p>
+<aside>
+The need to collapse lists often co-occurs with the need for inline style. A closely related problem is allocating message parts (e.g. list items) to different lines, e.g. making bullet lists.
+</aside>
+<p>The next example really starts to show multiple ergonomic problems interacting with each other, i.e. working over a list of interpolated strings and dealing with line breaks.</p>
+<div class="layout-chunk" data-layout="l-body">
+<div class="sourceCode">
+<pre class="sourceCode r"><code class="sourceCode r"><span class='va'>orig_name</span> <span class='op'>&lt;-</span> <span class='fu'><a href='https://rdrr.io/r/base/c.html'>c</a></span><span class='op'>(</span>a <span class='op'>=</span> <span class='st'>"o1"</span>, b <span class='op'>=</span> <span class='st'>"o2"</span><span class='op'>)</span>
+<span class='va'>name</span> <span class='op'>&lt;-</span> <span class='fu'><a href='https://rdrr.io/r/base/c.html'>c</a></span><span class='op'>(</span>a <span class='op'>=</span> <span class='st'>"n1"</span>, b <span class='op'>=</span> <span class='st'>"n2"</span><span class='op'>)</span>
+<span class='va'>new_names</span> <span class='op'>&lt;-</span> <span class='fu'><a href='https://rdrr.io/r/base/c.html'>c</a></span><span class='op'>(</span><span class='st'>"b"</span>, <span class='st'>"a"</span><span class='op'>)</span>
+
+<span class='fu'><a href='https://rdrr.io/r/base/message.html'>message</a></span><span class='op'>(</span>
+  <span class='st'>"New names:\n"</span>,
+  <span class='fu'><a href='https://rdrr.io/r/base/paste.html'>paste0</a></span><span class='op'>(</span><span class='va'>orig_name</span><span class='op'>[</span><span class='va'>new_names</span><span class='op'>]</span>, <span class='st'>" -&gt; "</span>, <span class='va'>name</span><span class='op'>[</span><span class='va'>new_names</span><span class='op'>]</span>, collapse <span class='op'>=</span> <span class='st'>"\n"</span><span class='op'>)</span>
+<span class='op'>)</span>
+</code></pre>
+</div>
+<pre><code>#&gt; New names:
+#&gt; o2 -&gt; n2
+#&gt; o1 -&gt; n1</code></pre>
+<div class="sourceCode">
+<pre class="sourceCode r"><code class="sourceCode r">
+<span class='co'># glue-ified</span>
+<span class='va'>nms</span> <span class='op'>&lt;-</span> <span class='fu'><a href='https://glue.tidyverse.org/reference/glue.html'>glue</a></span><span class='op'>(</span><span class='st'>"{orig_name[new_names]} -&gt; {name[new_names]}\n"</span><span class='op'>)</span>
+<span class='va'>nms</span> <span class='op'>&lt;-</span> <span class='fu'><a href='https://glue.tidyverse.org/reference/glue_collapse.html'>glue_collapse</a></span><span class='op'>(</span><span class='va'>nms</span>, sep <span class='op'>=</span> <span class='st'>"\n"</span><span class='op'>)</span>
+<span class='fu'><a href='https://rdrr.io/r/base/message.html'>message</a></span><span class='op'>(</span><span class='fu'><a href='https://glue.tidyverse.org/reference/glue.html'>glue</a></span><span class='op'>(</span><span class='st'>"New names:\n{nms}"</span><span class='op'>)</span><span class='op'>)</span>
+</code></pre>
+</div>
+<pre><code>#&gt; New names:
+#&gt; o2 -&gt; n2
+#&gt; o1 -&gt; n1</code></pre>
+</div>
+<p>We’re also starting to see some challenges with glue, where you need to make several calls in sequence, to build up the message. I’ve decided the explicit management of newlines (<code>\n</code>) is a strong indicator that there’s some missing bit of tooling.</p>
+<p>Let’s go out with an extravaganza of interpolation, inline styling and collapsing!</p>
+<div class="layout-chunk" data-layout="l-body">
+<div class="sourceCode">
+<pre class="sourceCode r"><code class="sourceCode r"><span class='va'>trained</span> <span class='op'>&lt;-</span> <span class='fu'><a href='https://rdrr.io/r/base/c.html'>c</a></span><span class='op'>(</span>alfa <span class='op'>=</span> <span class='st'>"apple"</span>, bravo <span class='op'>=</span> <span class='st'>"banana"</span><span class='op'>)</span>
+<span class='fu'><a href='https://rdrr.io/r/base/message.html'>message</a></span><span class='op'>(</span><span class='st'>"Multiple formats matched: "</span>,
+        <span class='fu'><a href='https://rdrr.io/r/base/paste.html'>paste</a></span><span class='op'>(</span><span class='st'>"\""</span>, <span class='fu'><a href='https://rdrr.io/r/base/names.html'>names</a></span><span class='op'>(</span><span class='va'>trained</span><span class='op'>)</span>, <span class='st'>"\"("</span>, <span class='va'>trained</span>, <span class='st'>")"</span>, sep <span class='op'>=</span> <span class='st'>""</span>,
+              collapse <span class='op'>=</span> <span class='st'>", "</span><span class='op'>)</span><span class='op'>)</span>
+</code></pre>
+</div>
+<pre><code>#&gt; Multiple formats matched: &quot;alfa&quot;(apple), &quot;bravo&quot;(banana)</code></pre>
+<div class="sourceCode">
+<pre class="sourceCode r"><code class="sourceCode r">
+<span class='co'># glue-ified</span>
+<span class='va'>x</span> <span class='op'>&lt;-</span> <span class='fu'><a href='https://glue.tidyverse.org/reference/glue.html'>glue</a></span><span class='op'>(</span><span class='st'>'"{names(trained)}"({trained})'</span><span class='op'>)</span>
+<span class='va'>y</span> <span class='op'>&lt;-</span> <span class='fu'><a href='https://glue.tidyverse.org/reference/glue_collapse.html'>glue_collapse</a></span><span class='op'>(</span><span class='va'>x</span>, sep <span class='op'>=</span> <span class='st'>", "</span><span class='op'>)</span>
+<span class='fu'><a href='https://rdrr.io/r/base/message.html'>message</a></span><span class='op'>(</span><span class='fu'><a href='https://glue.tidyverse.org/reference/glue.html'>glue</a></span><span class='op'>(</span><span class='st'>"Multiple formats matched: {y}"</span><span class='op'>)</span><span class='op'>)</span>
+</code></pre>
+</div>
+<pre><code>#&gt; Multiple formats matched: &quot;alfa&quot;(apple), &quot;bravo&quot;(banana)</code></pre>
+</div>
+<div class="sourceCode" id="cb20"><pre class="sourceCode r distill-force-highlighting-css"><code class="sourceCode r"></code></pre></div>
 <!--radix_placeholder_article_footer-->
 <!--/radix_placeholder_article_footer-->
 </div>
